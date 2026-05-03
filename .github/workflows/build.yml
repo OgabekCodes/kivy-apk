@@ -12,25 +12,40 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install system dependencies
+    - name: Install dependencies
       run: |
         sudo apt update
         sudo apt install -y python3-pip git zip unzip openjdk-17-jdk \
         build-essential libffi-dev libssl-dev
 
-    - name: Install Buildozer
+    - name: Install Python tools
       run: |
         pip install --upgrade pip
-        pip install buildozer cython
+        pip install cython buildozer
 
-    - name: Accept Android SDK licenses
+    - name: Install Android SDK tools (FIX AIDL)
       run: |
-        mkdir -p ~/.android
-        touch ~/.android/repositories.cfg
+        mkdir -p $HOME/android-sdk
+        cd $HOME/android-sdk
+
+        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+        unzip cmdline-tools.zip
+
+        mkdir -p cmdline-tools/latest
+        mv cmdline-tools/* cmdline-tools/latest/ || true
+
+        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager \
+          "platform-tools" \
+          "platforms;android-33" \
+          "build-tools;33.0.2"
 
     - name: Build APK
       run: |
-        buildozer init || true
         buildozer -v android debug
 
     - name: Upload APK
